@@ -3,6 +3,7 @@ const multer = require('multer');
 const { exec } = require('child_process');
 const axios = require('axios');
 const fs = require('fs');
+const crypto = require('crypto');
 require('dotenv').config();
 const { Client } = require('@notionhq/client');
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
@@ -190,6 +191,68 @@ async function summarizeWithCohere(text) {
     throw new Error('Cohere summarization failed.');
   }
 }
+
+// Zoom Web Meeting SDK Signature Generator
+function generateZoomSignature(sdkKey, sdkSecret, meetingNumber, role) {
+  const iat = Math.round(new Date().getTime() / 1000) - 30; // 30s buffer for clock drift
+  const exp = iat + 60 * 60 * 2; // Token expires in 2 hours
+  
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const payload = {
+    sdkKey: sdkKey,
+    mn: meetingNumber,
+    role: role, // 0 = attendee, 1 = host
+    iat: iat,
+    exp: exp,
+    appKey: sdkKey,
+    tokenExp: exp
+  };
+  
+  const base64UrlEncode = (str) => {
+    return Buffer.from(JSON.stringify(str))
+      .toString('base64')
+      .replace(/=/g, '')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_');
+  };
+  
+  const headerEncoded = base64UrlEncode(header);
+  const payloadEncoded = base64UrlEncode(payload);
+  
+  const signature = crypto
+    .createHmac('sha256', sdkSecret)
+    .update(`${headerEncoded}.${payloadEncoded}`)
+    .digest('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+    
+  return `${headerEncoded}.${payloadEncoded}.${signature}`;
+}
+
+// Secure signature generation endpoint
+app.post('/zoom-signature', (req, res) => {
+  const { meetingNumber, role } = req.body;
+  if (!meetingNumber) {
+    return res.status(400).json({ error: 'meetingNumber is required' });
+  }
+  
+  const sdkKey = process.env.ZOOM_SDK_KEY || 'YOUR_ZOOM_SDK_KEY';
+  const sdkSecret = process.env.ZOOM_SDK_SECRET || 'YOUR_ZOOM_SDK_SECRET';
+  
+  if (sdkKey === 'YOUR_ZOOM_SDK_KEY' || sdkSecret === 'YOUR_ZOOM_SDK_SECRET') {
+    console.warn('⚠️ Zoom credentials are not set in .env. Using fallbacks.');
+  }
+  
+  try {
+    const signature = generateZoomSignature(sdkKey, sdkSecret, meetingNumber, role !== undefined ? Number(role) : 0);
+    console.log(`✅ Zoom signature successfully generated for meeting: ${meetingNumber}`);
+    res.json({ signature, sdkKey });
+  } catch (err) {
+    console.error('❌ Zoom Signature Error:', err);
+    res.status(500).json({ error: 'Failed to generate Zoom meeting signature.' });
+  }
+});
 
 app.listen(3000, () => {
   console.log('🚀 Server started on http://localhost:3000');

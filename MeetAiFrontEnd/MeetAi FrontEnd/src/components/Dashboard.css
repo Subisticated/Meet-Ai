@@ -39,3 +39,34 @@
   font-size: 1rem;
   color: #718096;
 }
+
+.dashboard-card.zoom {
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  background: linear-gradient(135deg, #ffffff, #f5f3ff);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-card.zoom:hover {
+  border-color: #6366f1;
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.15);
+}
+
+.dashboard-card.zoom h2 {
+  color: #4f46e5;
+}
+
+.card-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
